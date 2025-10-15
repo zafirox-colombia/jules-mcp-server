@@ -1,0 +1,37 @@
+{
+  "name": "jules-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for Google Jules AI coding agent",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "jules-mcp": "build/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x build/index.js",
+    "dev": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector node build/index.js",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "jules",
+    "ai",
+    "coding-agent",
+    "model-context-protocol",
+    "google"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
