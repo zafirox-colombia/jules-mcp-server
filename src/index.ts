@@ -14,6 +14,7 @@ import { z } from "zod";
 
 import { julesRequest, formatErrorForUser, getApiKey } from "./client.js";
 import type {
+  Source,
   SourceList,
   SessionList,
   Session,
@@ -102,7 +103,79 @@ server.registerTool(
   }
 );
 
-// ===== Tool 2: Create Session =====
+// ===== Tool 2: Get Source =====
+server.registerTool(
+  "jules_get_source",
+  {
+    title: "Get Jules Source Details",
+    description:
+      "Get detailed information about a specific GitHub repository source connected to Jules. Provide the repository owner and name.",
+    inputSchema: {
+      repoOwner: z
+        .string()
+        .describe("GitHub repository owner (username or organization)"),
+      repoName: z.string().describe("GitHub repository name"),
+    },
+  },
+  async ({ repoOwner, repoName }) => {
+    try {
+      const sourceName = `sources/github/${repoOwner}/${repoName}`;
+      const source = await julesRequest<Source>(`/${sourceName}`);
+
+      const repo = source.githubRepo;
+      if (!repo) {
+        return {
+          content: [
+            {
+              type: "text",
+              text:
+                `Source found but no GitHub repository information available.\n\n` +
+                `Source ID: ${source.id}\n` +
+                `Source name: ${source.name}`,
+            },
+          ],
+        };
+      }
+
+      const privacy = repo.isPrivate ? "private" : "public";
+      const branches = repo.branches?.join(", ") || "none listed";
+
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `GitHub Repository Source:\n\n` +
+              `Owner: ${repo.owner}\n` +
+              `Repository: ${repo.repo}\n` +
+              `Visibility: ${privacy}\n` +
+              `Available branches: ${branches}\n\n` +
+              `Source ID: ${source.id}\n` +
+              `Source name: ${source.name}`,
+          },
+        ],
+      };
+    } catch (error) {
+      console.error("[jules_get_source]", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `Error getting source: ${formatErrorForUser(error)}\n\n` +
+              `Common issues:\n` +
+              `- Repository not connected to Jules (run jules_list_sources)\n` +
+              `- Invalid repository owner/name\n` +
+              `- Repository access was revoked`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+);
+
+// ===== Tool 3: Create Session =====
 server.registerTool(
   "jules_create_session",
   {
@@ -206,7 +279,7 @@ server.registerTool(
   }
 );
 
-// ===== Tool 3: List Sessions =====
+// ===== Tool 4: List Sessions =====
 server.registerTool(
   "jules_list_sessions",
   {
@@ -282,7 +355,7 @@ server.registerTool(
   }
 );
 
-// ===== Tool 4: Get Session Status =====
+// ===== Tool 5: Get Session Status =====
 server.registerTool(
   "jules_get_status",
   {
@@ -383,7 +456,7 @@ server.registerTool(
   }
 );
 
-// ===== Tool 5: Send Message =====
+// ===== Tool 6: Send Message =====
 server.registerTool(
   "jules_send_message",
   {
@@ -434,7 +507,7 @@ server.registerTool(
   }
 );
 
-// ===== Tool 6: List Activities =====
+// ===== Tool 7: List Activities =====
 server.registerTool(
   "jules_list_activities",
   {
@@ -552,7 +625,7 @@ server.registerTool(
   }
 );
 
-// ===== Tool 7: Approve Plan =====
+// ===== Tool 8: Approve Plan =====
 server.registerTool(
   "jules_approve_plan",
   {
@@ -595,7 +668,7 @@ server.registerTool(
   }
 );
 
-// ===== Tool 8: Get Session Output =====
+// ===== Tool 9: Get Session Output =====
 server.registerTool(
   "jules_get_session_output",
   {
@@ -687,8 +760,9 @@ async function main() {
 
     // Log to stderr (stdout is reserved for MCP protocol)
     console.error("Jules MCP server running");
-    console.error("Connected tools: 8");
+    console.error("Connected tools: 9");
     console.error("  - jules_list_sources");
+    console.error("  - jules_get_source");
     console.error("  - jules_create_session");
     console.error("  - jules_list_sessions");
     console.error("  - jules_get_status");
