@@ -1,34 +1,34 @@
 /**
- * Jules API client helper
- * Handles authentication, error handling, and request/response processing
+ * Cliente de la API de Jules
+ * Maneja autenticación, manejo de errores y procesamiento de solicitudes/respuestas
  */
 
 import type { JulesApiError } from "./types.js";
 
-// Jules API configuration
+// Configuración de la API de Jules
 export const JULES_API_BASE = "https://jules.googleapis.com/v1alpha";
 
 /**
- * Get Jules API key from environment
- * @throws {Error} if JULES_API_KEY is not set
+ * Obtiene la API key de Jules desde las variables de entorno
+ * @throws {Error} si JULES_API_KEY no está configurada
  */
 export function getApiKey(): string {
   const apiKey = process.env.JULES_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "JULES_API_KEY environment variable is required. " +
-      "Get your API key from https://jules.google.com/settings#api"
+      "La variable de entorno JULES_API_KEY es requerida. " +
+      "Obtén tu API key desde https://jules.google.com/settings#api"
     );
   }
   return apiKey;
 }
 
 /**
- * Make a request to the Jules API
- * @param endpoint - API endpoint path (e.g., "/sources", "/sessions")
- * @param options - Fetch options (method, body, etc.)
- * @returns Parsed JSON response
- * @throws {Error} on API errors with descriptive messages
+ * Realiza una solicitud a la API de Jules
+ * @param endpoint - Ruta del endpoint de la API (ej: "/sources", "/sessions")
+ * @param options - Opciones de fetch (método, body, etc.)
+ * @returns Respuesta JSON parseada
+ * @throws {Error} en errores de API con mensajes descriptivos
  */
 export async function julesRequest<T = any>(
   endpoint: string,
@@ -36,6 +36,9 @@ export async function julesRequest<T = any>(
 ): Promise<T> {
   const apiKey = getApiKey();
   const url = `${JULES_API_BASE}${endpoint}`;
+
+  // DEBUG: Imprimir URL en logs
+  console.error(`[JulesRequest] ${options.method || "GET"} ${url}`);
 
   try {
     const response = await fetch(url, {
@@ -47,23 +50,23 @@ export async function julesRequest<T = any>(
       },
     });
 
-    // Handle non-OK responses
+    // Manejar respuestas no exitosas
     if (!response.ok) {
       const contentType = response.headers.get("content-type");
-      let errorMessage = `Jules API error ${response.status}: ${response.statusText}`;
+      let errorMessage = `Error de la API de Jules ${response.status}: ${response.statusText}`;
 
-      // Try to parse error body if it's JSON
+      // Intentar parsear el cuerpo del error si es JSON
       if (contentType?.includes("application/json")) {
         try {
           const errorData = (await response.json()) as JulesApiError;
           if (errorData.error?.message) {
-            errorMessage = `Jules API error ${response.status}: ${errorData.error.message}`;
+            errorMessage = `Error de la API de Jules ${response.status}: ${errorData.error.message}`;
           }
         } catch {
-          // If JSON parsing fails, use the original error message
+          // Si el parseo JSON falla, usar el mensaje de error original
         }
       } else {
-        // For non-JSON errors, try to get text body
+        // Para errores no JSON, intentar obtener el texto del cuerpo
         const errorText = await response.text();
         if (errorText) {
           errorMessage += ` - ${errorText}`;
@@ -73,27 +76,32 @@ export async function julesRequest<T = any>(
       throw new Error(errorMessage);
     }
 
-    // Parse successful response
-    return (await response.json()) as T;
+    // Parsear respuesta exitosa
+    // Para respuestas vacías (como DELETE), devolver objeto vacío
+    const text = await response.text();
+    if (!text) {
+      return {} as T;
+    }
+    return JSON.parse(text) as T;
   } catch (error) {
-    // Re-throw with additional context if it's a network error
+    // Re-lanzar con contexto adicional si es un error de red
     if (error instanceof TypeError && error.message.includes("fetch")) {
       throw new Error(
-        `Network error connecting to Jules API: ${error.message}`
+        `Error de red al conectar con la API de Jules: ${error.message}`
       );
     }
-    // Re-throw other errors as-is
+    // Re-lanzar otros errores tal cual
     throw error;
   }
 }
 
 /**
- * Format error for MCP tool response
- * Extracts user-friendly message without exposing sensitive details
+ * Formatea el error para la respuesta de la herramienta MCP
+ * Extrae un mensaje amigable sin exponer detalles sensibles
  */
 export function formatErrorForUser(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  return "An unknown error occurred";
+  return "Ocurrió un error desconocido";
 }

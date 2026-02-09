@@ -1,0 +1,29 @@
+# Configuración de Cloudflare Workers para Jules MCP Server
+
+name = "jules-mcp-server"
+main = "build/worker.js"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Variables de entorno (no secretos)
+[vars]
+# Las variables públicas van aquí
+
+# Los secretos (como JULES_API_KEY) se configuran con:
+# npx wrangler secret put JULES_API_KEY
+
+[durable_objects]
+bindings = [
+  { name = "JULES_DO", class_name = "JulesDurableObject" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["JulesDurableObject"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+invocation_logs = true
